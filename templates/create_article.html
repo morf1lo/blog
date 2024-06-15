@@ -1,0 +1,24 @@
+{{ define "create_article" }}
+
+{{ template "header" . }}
+
+<div class="container" style="margin-top: 100px;">
+  <div class="row justify-content-center">
+    <div class="col-md-6">
+      <div class="text-center">
+        <h2 class="mb-4">Create article page</h2>
+        <form action="/articles/create" method="post">
+          <div class="mb-3">
+            <input type="text" name="title" class="form-control" placeholder="Title...">
+          </div>
+          <div class="mb-3">
+            <textarea name="text" class="form-control" placeholder="Article text..."></textarea>
+          </div>
+          <button type="submit" class="btn btn-primary btn-lg">Create</button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+{{ end }}

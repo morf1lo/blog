@@ -1,0 +1,201 @@
+{{ define "article" }}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>{{ .data.Title }}</title>
+    <style>
+        .article-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .article-header {
+            margin-bottom: 20px;
+        }
+        .article-title {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .article-meta {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .article-meta .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .article-meta .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .article-meta .author-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .article-meta .date {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .article-body {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 40px;
+        }
+        .comments-section {
+            margin-top: 40px;
+        }
+        .comments-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .comments-container h2 {
+            font-size: 1.8em;
+            margin-bottom: 20px;
+        }
+        .comment {
+            border-bottom: 1px solid #eee;
+            padding-bottom: 20px;
+            margin-bottom: 20px;
+        }
+        .comment-meta {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        .comment-meta .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .comment-meta .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .comment-meta .author-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .comment-meta .author-name.author {
+            color: #4caf50;
+        }
+        .comment-meta .comment-date {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .comment-body {
+            font-size: 1.1em;
+            line-height: 1.4;
+        }
+        .comment-form {
+            margin-top: 40px;
+        }
+        .comment-form textarea {
+            width: 100%;
+            height: 100px;
+            padding: 10px;
+            font-size: 1em;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        .comment-form button {
+            padding: 10px 20px;
+            font-size: 1em;
+            border: none;
+            border-radius: 4px;
+            background-color: #007bff;
+            color: #fff;
+            cursor: pointer;
+        }
+        .comment-form button:hover {
+            background-color: #0056b3;
+        }
+    </style>
+</head>
+<body>
+    {{ template "header" . }}
+
+    <div class="article-container">
+        <div class="article-header">
+            <h1 class="article-title">{{ .data.Title }}</h1>
+            <div class="article-meta">
+                <img src="{{ .data.UserAvatar }}" alt="{{ .data.Username }}'s avatar" class="avatar">
+                <div class="author-info">
+                    <a href="/profile/{{ .data.Username }}"><span class="author-name">{{ .data.Username }}</span></a>
+                    <span class="date">{{ .data.DateAdded.Format "02 Jan 2006 15:04" }}</span>
+                </div>
+            </div>
+        </div>
+        <div class="article-body">
+            <p>{{ .data.Text }}</p>
+        </div>
+        <div class="comments-section">
+            <h2>Comments</h2>
+            {{ if .comments }}
+                {{ range .comments }}
+                    <div class="comment">
+                        <div class="comment-meta">
+                            {{ if .UserAvatar }}
+                            <img src="{{ .UserAvatar }}" alt="{{ .Username }}'s avatar" class="avatar">
+                            {{ else }}
+                            <img src="/public/avatars/default-48.png" alt="{{ .Username }}'s avatar" class="avatar">
+                            {{ end }}
+                            <div class="author-info">
+                                <span class="author-name{{ if eq .UserID $.data.UserID }} author{{ end }}">{{ .Username }}</span>
+                                <span class="comment-date">{{ .DateAdded.Format "02 Jan 2006 15:04" }}</span>
+                            </div>
+                        </div>
+                        <div class="comment-body">
+                            <p>{{ .Body }}</p>
+                        </div>
+                        {{ if or (eq $.userData.ID $.data.UserID) (eq .UserID $.userData.ID) }}
+                            <button class="btn btn-danger" onclick="deleteComment('{{ .ID }}')">Delete</button>
+                        {{ end }}
+                    </div>
+                {{ end }}
+            {{ else }}
+                <p>No comments yet. Be the first to comment!</p>
+            {{ end }}
+
+            <div class="comment-form">
+                <form action="/comments/{{ .data.ID }}" method="POST">
+                    <textarea name="body" class="form-control" placeholder="Add your comment..." required></textarea>
+                    <button type="submit" class="btn btn-primary">Submit Comment</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function deleteComment(commentID) {
+            fetch(`/comments/${commentID}`, {
+                method: 'DELETE',
+            })
+            .then(response => {
+                if (!response.ok) {
+                    throw new Error('Failed to delete comment');
+                }
+                location.reload();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>    
+</body>
+</html>
+
+{{ end }}

@@ -1,0 +1,86 @@
+{{ define "index" }}
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Super Blog - Main page</title>
+  <style>
+        .article-container {
+            max-width: 800px;
+            margin: 50px auto;
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .article-header {
+            margin-bottom: 20px;
+        }
+        .article-title {
+            font-size: 2em;
+            font-weight: bold;
+        }
+        .article-meta {
+            display: flex;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .article-meta .avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-right: 10px;
+        }
+        .article-meta .author-info {
+            display: flex;
+            flex-direction: column;
+        }
+        .article-meta .author-name {
+            font-weight: bold;
+            color: #333;
+        }
+        .article-meta .date {
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .article-body {
+            font-size: 1.2em;
+            line-height: 1.6;
+            margin-bottom: 20px;
+        }
+        .read-more {
+            display: block;
+            text-align: right;
+            margin-top: 20px;
+        }
+  </style>
+</head>
+<body>
+  {{ template "header" . }}
+
+  {{ range .lastArticles }}
+    <div class="article-container">
+      <div class="article-header">
+        <h1 class="article-title">{{ .Title }}</h1>
+        <div class="article-meta">
+          <img src="{{ .UserAvatar }}" alt="{{ .Username }}'s avatar" class="avatar">
+          <div class="author-info">
+            <a href="/profile/{{ .Username }}"><span class="author-name">{{ .Username }}</span></a>
+            <span class="date">{{ .DateAdded.Format "02 Jan 2006 15:04" }}</span>
+            </div>
+        </div>
+      </div>
+      <div class="article-body">
+        <p>{{ if gt (len .Text) 200 }}{{ slice .Text 0 200 }}...{{ else }}{{ .Text }}{{ end }}</p>
+      </div>
+      <div class="read-more">
+        <a href="/article/{{ .ID }}" type="button" class="btn btn-outline-info">Read more</a>
+      </div>
+    </div>
+  {{ end }}
+</body>
+</html>
+
+{{ end }}

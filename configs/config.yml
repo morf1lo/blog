@@ -1,0 +1,7 @@
+app:
+  host: "localhost"
+  port: "8090"
+
+redis:
+  db: 0
+  protocol: 2
