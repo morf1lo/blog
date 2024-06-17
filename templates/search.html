@@ -5,22 +5,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <link rel="stylesheet" href="/static/css/search.css">
   <title>Search results for: {{ .query }}</title>
-  <style>
-    .articles-section {
-      flex: 2;
-      padding-left: 20px;
-    }
-    .article-link {
-      color: cadetblue;
-      text-decoration: none;
-      display: block;
-      margin-bottom: 10px;
-    }
-    .article-link:hover {
-      text-decoration: underline;
-    }
-  </style>
 </head>
 <body>
   {{ template "header" . }}
