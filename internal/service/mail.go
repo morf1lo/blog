@@ -1,10 +1,14 @@
 package service
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/smtp"
 	"os"
+	"time"
 
+	"github.com/morf1lo/blog/internal/mq"
+	"github.com/sirupsen/logrus"
 	"github.com/spf13/viper"
 )
 
@@ -14,19 +18,53 @@ const (
 )
 
 type MailService struct {
+	rabbitMQ *mq.MQConn
+
 	from string
 	pass string
 	host string
 	port string
 }
 
-func NewMailService() *MailService {
+func NewMailService(rabbitMQ *mq.MQConn) *MailService {
 	return &MailService{
+		rabbitMQ: rabbitMQ,
 		from: os.Getenv("EMAIL"),
 		pass: os.Getenv("EMAIL_PASS"),
 		host: os.Getenv("SMTP_HOST"),
 		port: os.Getenv("SMTP_PORT"),
 	}
+}
+
+func (s *MailService) ProcessActivationMails() {
+	msgs, err := s.rabbitMQ.Consume("notifications.mail.activation")
+	if err != nil {
+		logrus.Fatalf("error starting consumer: %s", err.Error())
+	}
+
+	go func ()  {
+		for msg := range msgs {
+			var message ActivationMailData
+			if err := json.Unmarshal(msg.Body, &message); err != nil {
+				logrus.Errorf("failed unmarshal message: %s", err.Error())
+				msg.Nack(false, true)
+				continue
+			}
+
+			if err := s.SendActivationMail(message.To, message.Link); err != nil {
+				logrus.Errorf("failed send activation mail: %s", err.Error())
+				msg.Nack(false, true)
+				continue
+			}
+
+			if err := msg.Ack(false); err != nil {
+				logrus.Errorf("failed ack message: %s", err.Error())
+			}
+
+			logrus.Println("Activation mail was sent successfully!")
+			time.Sleep(time.Second * 3)
+		}
+	}()
 }
 
 func (s *MailService) SendActivationMail(to []string, link string) error {

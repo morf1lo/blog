@@ -1,24 +1,31 @@
 package service
 
 import (
+	"context"
+	"encoding/json"
+
 	"github.com/morf1lo/blog/internal/model"
+	"github.com/morf1lo/blog/internal/mq"
 	"github.com/morf1lo/blog/internal/repository"
 	"github.com/morf1lo/blog/pkg/auth"
 	"github.com/morf1lo/blog/pkg/exp"
 	"github.com/morf1lo/blog/pkg/hasher"
+	"github.com/redis/go-redis/v9"
 
 	"github.com/google/uuid"
 )
 
 type AuthService struct {
 	repo *repository.Repository
-	Mail
+	rdb *redis.Client
+	rabbitMQ *mq.MQConn
 }
 
-func NewAuthService(repo *repository.Repository, mailService Mail) *AuthService {
+func NewAuthService(repo *repository.Repository, rabbitMQ *mq.MQConn, rdb *redis.Client) *AuthService {
 	return &AuthService{
 		repo: repo,
-		Mail: mailService,
+		rdb: rdb,
+		rabbitMQ: rabbitMQ,
 	}
 }
 
@@ -49,7 +56,15 @@ func (s *AuthService) SignUp(user *model.User) (string, error) {
 		return "", err
 	}
 
-	if err := s.Mail.SendActivationMail([]string{user.Email}, *user.ActivationLink); err != nil {
+	sendMailData := ActivationMailData{
+		To: []string{user.Email},
+		Link: activationLink,
+	}
+	sendMailDataJSON, err := json.Marshal(sendMailData)
+	if err != nil {
+		return "", err
+	}
+	if err := s.rabbitMQ.Publish("notifications.mail.activation", sendMailDataJSON); err != nil {
 		return "", err
 	}
 
@@ -82,13 +97,17 @@ func (s *AuthService) SignIn(user *model.User) (string, error) {
 	return token, nil
 }
 
-func (s *AuthService) Activate(activationLink string) error {
+func (s *AuthService) Activate(ctx context.Context, activationLink string) error {
 	user, err := s.repo.User.FindByActivationLink(activationLink)
 	if err != nil {
 		return err
 	}
 	if user == nil {
 		return errUserNotFound
+	}
+
+	if err := s.rdb.Del(ctx, userPrefix + user.ID.String()).Err(); err != nil {
+		return err
 	}
 
 	fields := map[string]interface{}{

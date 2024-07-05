@@ -54,7 +54,7 @@ func (h *Handler) authSignIn(c *gin.Context) {
 func (h *Handler) authActivate(c *gin.Context) {
 	activationLink := c.Param("link")
 
-	if err := h.services.Authorization.Activate(activationLink); err != nil {
+	if err := h.services.Authorization.Activate(c.Request.Context(), activationLink); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}

@@ -11,6 +11,7 @@ import (
 	blog "github.com/morf1lo/blog"
 	"github.com/morf1lo/blog/internal/config"
 	"github.com/morf1lo/blog/internal/handler"
+	"github.com/morf1lo/blog/internal/mq"
 	"github.com/morf1lo/blog/internal/repository"
 	"github.com/morf1lo/blog/internal/service"
 	"github.com/redis/go-redis/v9"
@@ -55,8 +56,14 @@ func main() {
 	}
 	rdb := redis.NewClient(rdbConfig)
 
+	rabbitMQConn, err := mq.New(os.Getenv("RABBITMQ_URL"))
+	if err != nil {
+		logrus.Fatalf("error connecting to rabbitmq: %s", err.Error())
+	}
+	defer rabbitMQConn.Close()
+
 	repos := repository.New(db)
-	services := service.New(repos, rdb)
+	services := service.New(repos, rdb, rabbitMQConn)
 	handlers := handler.New(services)
 
 	srv := &blog.Server{}
@@ -65,6 +72,8 @@ func main() {
 			log.Fatalf("error while running server: %s", err.Error())
 		}
 	}()
+
+	go services.Mail.ProcessActivationMails()
 
 	log.Print("Server Started")
 

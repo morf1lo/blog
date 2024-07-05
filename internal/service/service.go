@@ -5,6 +5,7 @@ import (
 	"mime/multipart"
 
 	"github.com/morf1lo/blog/internal/model"
+	"github.com/morf1lo/blog/internal/mq"
 	"github.com/morf1lo/blog/internal/repository"
 	"github.com/redis/go-redis/v9"
 
@@ -15,12 +16,13 @@ import (
 type Authorization interface {
 	SignUp(user *model.User) (string, error)
 	SignIn(user *model.User) (string, error)
-	Activate(activationLink string) error
+	Activate(ctx context.Context, activationLink string) error
 	SaveResetPasswordToken(token *model.ResetPasswordToken) error
 	ResetPassword(token string, newPassword string) error
 }
 
 type Mail interface {
+	ProcessActivationMails()
 	SendActivationMail(to []string, link string) error
 	SendResetPasswordToken(to []string, link string) error
 }
@@ -47,16 +49,16 @@ type Comment interface {
 
 type Service struct {
 	Authorization
+	Mail
 	User
 	Article
 	Comment
 }
 
-func New(repo *repository.Repository, rdb *redis.Client) *Service {
-	mailService := NewMailService()
-
+func New(repo *repository.Repository, rdb *redis.Client, rabbitMQ *mq.MQConn) *Service {
 	return &Service{
-		Authorization: NewAuthService(repo, mailService),
+		Authorization: NewAuthService(repo, rabbitMQ, rdb),
+		Mail: NewMailService(rabbitMQ),
 		User: NewUserService(repo, rdb),
 		Article: NewArticleRepo(repo, rdb),
 		Comment: NewCommentService(repo, rdb),
