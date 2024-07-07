@@ -88,12 +88,12 @@ func (h *Handler) authSaveResetPasswordToken(c *gin.Context) {
 
 type requestResetPasswordToken struct {
 	Token string `json:"token" binding:"required"`
-	NewPassword string `json:"newPassword" binding:"min=8,max=24"`
+	NewPassword string `json:"newPassword" binding:"required,min=8,max=24"`
 }
 
 func (h *Handler) authResetPasswordToken(c *gin.Context) {
 	var request requestResetPasswordToken
-	if err := c.ShouldBind(&request); err != nil {
+	if err := c.ShouldBindBodyWithJSON(&request); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}

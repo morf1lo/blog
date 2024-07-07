@@ -37,9 +37,9 @@ func NewMailService(rabbitMQ *mq.MQConn) *MailService {
 }
 
 func (s *MailService) ProcessActivationMails() {
-	msgs, err := s.rabbitMQ.Consume("notifications.mail.activation")
+	msgs, err := s.rabbitMQ.Consume(ACTIVATION)
 	if err != nil {
-		logrus.Fatalf("error starting consumer: %s", err.Error())
+		logrus.Fatalf("error starting activation consumer: %s", err.Error())
 	}
 
 	go func ()  {
@@ -62,7 +62,7 @@ func (s *MailService) ProcessActivationMails() {
 			}
 
 			logrus.Println("Activation mail was sent successfully!")
-			time.Sleep(time.Second * 3)
+			time.Sleep(time.Second / 2)
 		}
 	}()
 }
@@ -97,7 +97,38 @@ func (s *MailService) SendActivationMail(to []string, link string) error {
 	return nil
 }
 
-func (s *MailService) SendResetPasswordToken(to []string, link string) error {
+func (s *MailService) ProcessResetPasswordTokenMails() {
+	msgs, err := s.rabbitMQ.Consume(RESET_TOKENS)
+	if err != nil {
+		logrus.Fatalf("error starting reset password tokens consumer: %s", err.Error())
+	}
+
+	go func ()  {
+		for msg := range msgs {
+			var message ResetPasswordTokenMailData
+			if err := json.Unmarshal(msg.Body, &message); err != nil {
+				logrus.Errorf("failed unmarshal message: %s", err.Error())
+				msg.Nack(false, true)
+				continue
+			}
+
+			if err := s.SendResetPasswordToken(message.To, message.Token); err != nil {
+				logrus.Errorf("failed send reset password token mail: %s", err.Error())
+				msg.Nack(false, true)
+				continue
+			}
+
+			if err := msg.Ack(false); err != nil {
+				logrus.Errorf("failed ack message: %s", err.Error())
+			}
+
+			logrus.Println("Reset password token mail was sent successfully!")
+			time.Sleep(time.Second / 2)
+		}
+	}()
+}
+
+func (s *MailService) SendResetPasswordToken(to []string, token string) error {
 	subject := "Password Reset"
 	body := fmt.Sprintf(`
 		<!DOCTYPE html>
@@ -112,7 +143,7 @@ func (s *MailService) SendResetPasswordToken(to []string, link string) error {
 			<a href="%s" style="padding: 12px 80px;background: #ffe057;color: #121212;text-decoration: none;border-radius: 50px;text-transform: uppercase;font-family: monospace;font-size: 18px;font-weight: 600;">Reset</a>
 		</body>
 		</html>
-	`, fmt.Sprintf(resetPasswordLink, viper.GetString("app.host"), viper.GetString("app.port"), link))
+	`, fmt.Sprintf(resetPasswordLink, viper.GetString("app.host"), viper.GetString("app.port"), token))
 
 	msg := []byte("Subject: " + subject + "\r\n" +
 	"MIME-version: 1.0;\nContent-Type: text/html; charset=\"UTF-8\";\n\n" +

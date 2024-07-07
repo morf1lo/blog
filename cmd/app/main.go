@@ -74,6 +74,7 @@ func main() {
 	}()
 
 	go services.Mail.ProcessActivationMails()
+	go services.Mail.ProcessResetPasswordTokenMails()
 
 	log.Print("Server Started")
 

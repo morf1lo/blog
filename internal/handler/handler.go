@@ -48,7 +48,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		auth.POST("/signin", h.authSignIn)
 		auth.GET("/activate/:link", h.authActivate)
 		auth.POST("/reset", h.authSaveResetPasswordToken)
-		auth.GET("/reset", h.authResetPasswordToken)
+		auth.PATCH("/reset", h.authResetPasswordToken)
 		auth.GET("/signout", h.authSignOut)
 	}
 

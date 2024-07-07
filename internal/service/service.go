@@ -24,6 +24,7 @@ type Authorization interface {
 type Mail interface {
 	ProcessActivationMails()
 	SendActivationMail(to []string, link string) error
+	ProcessResetPasswordTokenMails()
 	SendResetPasswordToken(to []string, link string) error
 }
 

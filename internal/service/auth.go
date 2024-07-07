@@ -64,7 +64,7 @@ func (s *AuthService) SignUp(user *model.User) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	if err := s.rabbitMQ.Publish("notifications.mail.activation", sendMailDataJSON); err != nil {
+	if err := s.rabbitMQ.Publish(ACTIVATION, sendMailDataJSON); err != nil {
 		return "", err
 	}
 
@@ -118,7 +118,25 @@ func (s *AuthService) Activate(ctx context.Context, activationLink string) error
 }
 
 func (s *AuthService) SaveResetPasswordToken(token *model.ResetPasswordToken) error {
-	return s.repo.Authorization.SaveResetPasswordToken(token)
+	hash, err := hasher.NewHash(12)
+	if err != nil {
+		return err
+	}
+	token.Token = hash
+
+	if err := s.repo.Authorization.SaveResetPasswordToken(token); err != nil {
+		return err
+	}
+
+	sendMailData := ResetPasswordTokenMailData{
+		To: []string{token.UserEmail},
+		Token: token.Token,
+	}
+	sendMailDataJSON, err := json.Marshal(sendMailData)
+	if err != nil {
+		return err
+	}
+	return s.rabbitMQ.Publish(RESET_TOKENS, sendMailDataJSON)
 }
 
 func (s *AuthService) FindResetPasswordToken(token string) (*model.ResetPasswordToken, error) {
